@@ -155,3 +155,21 @@ LOGGING = {
         },
     }
 }
+
+AUTHENTICATION_BACKENDS = (
+   'MantidRemote.AuthBackends.SnsLdapBackend',
+   'django.contrib.auth.backends.ModelBackend',
+   # The normal auth method is to check the LDAP server.  We've
+   # got the ModelBackend here so that we can add a couple of
+   # admin users without having to set some extra fields in the
+   # LDAP record.  Not entirely convinced this is a good idea, though.  
+)
+
+
+# Values needed to talk to the LDAP server
+LDAP_HOST = "ldaps://data.sns.gov/"
+# Alternative host
+# LDAP_HOST= "ldaps://data.sns.gov/"
+LDAP_BASE_DN = "dc=sns,dc=ornl,dc=gov"
+LDAP_FILTER = "(&(objectClass=posixGroup)(cn=SNS_Neutron))"
+
