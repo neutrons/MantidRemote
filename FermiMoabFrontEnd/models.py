@@ -1,8 +1,9 @@
 from django.db import models
 from django.contrib import admin
+from django.contrib.auth.models import User
 
 class Transaction( models.Model):
-    owner = models.CharField(max_length = 8) # at ORNL, 3 is sufficient
+    owner = models.ForeignKey(User)
     directory = models.TextField()
     start_time = models.DateTimeField(auto_now = False, auto_now_add = True)
     # Note: we're also relying on the automatically generated id field

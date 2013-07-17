@@ -18,6 +18,10 @@ urlpatterns = patterns('',
 
 
 # URL Patterns for the API
+# The (?i) forces case insensitive matching
 urlpatterns += patterns( 'FermiMoabFrontEnd.views',
-    url(r'^query$', 'query', name='query_url'),
+    url(r'^(?i)info$', 'info', name='info_url'),
+    url(r'^(?i)authenticate$', 'authenticate', name='authenticate_url'),
+    url(r'^(?i)transaction$', 'transaction', name='transaction_url'),
+#    url(r'^(?i)query$', 'query', name='query_url'),
 )

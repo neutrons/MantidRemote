@@ -166,6 +166,20 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
+# Min/Max versions of the API that the server can recognize
+# This needs to be in the form of a dictionarsy so that it
+# can easily be output as JSON text 
+API_VERSIONS = {
+    'Min':0,
+    'Max':0,
+}
+
+# Location of the 'scratch' directory where the server
+# can create directories for each transaction
+#TRANSACTION_DIR='/var/www/apache_scratch'
+TRANSACTION_DIR='/tmp/apache_scratch' # used for test/debug
+
+
 # Values needed to talk to the LDAP server
 LDAP_HOST = "ldaps://data.sns.gov/"
 # Alternative host
