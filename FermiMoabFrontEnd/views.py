@@ -7,9 +7,8 @@ from MantidRemote.BasicAuthHelper import logged_in_or_basicauth
 
 import datetime
 import json
-import os.path
 import os
-
+import subprocess
 
 
 def info( request):
@@ -25,6 +24,7 @@ def info( request):
     json_output['API_Versions'] = settings.API_VERSIONS
     
     resp = HttpResponse( json.dumps(json_output))
+
     return resp
     
 
@@ -67,9 +67,22 @@ def transaction( request):
         # generate the name and create the directory
         dir_name = os.path.join( settings.TRANSACTION_DIR, request.user.username + '_' + str(new_trans.id))
         os.mkdir(dir_name, 0770)
-        # TODO!! Call setfacl on the directory!!
-        
-        
+
+        # Use setfacl to give the user read, write & execute permissions
+        # on the directory we just created    
+        permissions = request.user.username + ':rwX'
+        proc = subprocess.Popen([settings.SETFACL_BIN, '-m', permissions, dir_name])
+        proc.wait()
+        if proc.returncode != 0:
+            # couldn't set the ACL (maybe this filesystem doesn't support ACL's?)
+            # so we need to fail the operation and that means cleaning up after
+            # ourselves
+            recursive_rm( dir_name)
+            new_trans.delete()
+            return HttpResponse( status=500) # internal server error
+
+        # If we make it here, everything's good - save the transaction object
+        # to the DB and return the required JSON        
         new_trans.directory = dir_name
         new_trans.save()
         
@@ -84,10 +97,44 @@ def transaction( request):
         if not 'TransID' in request.GET:
             return HttpResponse( status=400)  # Bad request
         
-        id = request.GET['TransID']
+        trans_id = request.GET['TransID']
+        trans = Transaction.objects.get( id=trans_id)
+                
+        # verify the id we're trying to stop is owned by the user
+        if trans.owner != request.user:
+            return HttpResponse( status=400) 
         
-        # TODO: Implement this part!
-        return HttpResponse( "Stopping transactions is not implemented, yet.", status=500)
+        # The transaction is validated - delete the files/directories
+        recursive_rm( trans.directory)
         
+        # delete the transaction from the db (Django defaults to 'cascaded' deletes,
+        # so all we need to do is remove the transaction and everything that was pointing
+        # to it (jobs & files) will also be removed
+        trans.delete()
         
+        return HttpResponse()
+    
 
+def recursive_rm( dirname):
+    '''
+    Delete all files and directories under the specified directory - including
+    the specified directory itself.  Effectively identical to 'rm -r <dirname>'
+    
+    Helper for the transaction view.
+    '''
+    dirs = os.walk( dirname)
+    dirnames = []
+    for item in dirs:
+        dirnames.append(item[0])
+        for filename in item[2]:
+            path = os.path.join( item[0], filename)
+            os.remove(path)
+    
+    # That takes care of the files, now to remove the directories
+    # Sort the full pathnames by length.  Calling rmdir the longest paths
+    # first ensures we remove any child dir before removing its parent
+    dirnames.sort()
+    for i in range(len(dirnames)-1, -1, -1):
+        os.rmdir(dirnames[i])
+    
+    

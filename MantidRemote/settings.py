@@ -179,6 +179,8 @@ API_VERSIONS = {
 #TRANSACTION_DIR='/var/www/apache_scratch'
 TRANSACTION_DIR='/tmp/apache_scratch' # used for test/debug
 
+# Location of the setfacl binary
+SETFACL_BIN='/usr/bin/setfacl'
 
 # Values needed to talk to the LDAP server
 LDAP_HOST = "ldaps://data.sns.gov/"
