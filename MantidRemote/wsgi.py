@@ -31,7 +31,7 @@ application = get_wsgi_application()
 # Import the werkzeug debugger so we can debug problems via the browsers
 # NOTE: Do not include this code in production as it could allow any user
 # to run arbitrary python code in the context of the web server!
-from werkzeug.debug import DebuggedApplication
+from werkzeug.debug import DebuggedApplication  # @UnresolvedImport
 application = DebuggedApplication(application, evalex=True)
 
 def null_technical_500_response(request, exc_type, exc_value, tb):
