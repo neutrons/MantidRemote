@@ -94,7 +94,11 @@ TEMPLATE_LOADERS = (
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+# Disabling CSRF protection for the moment while I figure out if it can be
+# made to work in the sort of RESTful environment I'm creating (ie, one
+# where there's no template where the CSRF token can be initially 
+# presented to the user) or if it's really necessary at all.
+#    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # Uncomment the next line for simple clickjacking protection:
@@ -166,13 +170,15 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
-# Min/Max versions of the API that the server can recognize
-# This needs to be in the form of a dictionarsy so that it
-# can easily be output as JSON text 
-API_VERSIONS = {
-    'Min':0,
-    'Max':0,
-}
+# API version and supported extensions
+# The info view will out this as JSON text
+#
+# This should be an integer.  We don't expect it to increase often/
+API_VERSION = 0  
+# A list of strings (ie: the names of the extensions).  None currently
+# supported.  Check the API doc to see what's been defined so far.
+API_EXTENSIONS = []
+
 
 # Location of the 'scratch' directory where the server
 # can create directories for each transaction
