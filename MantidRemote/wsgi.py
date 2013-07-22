@@ -17,6 +17,9 @@ import os
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "MantidRemote.settings")
 
+# Workaround so that we'll accept SNS's old, insecure LDAP certificate
+os.environ['NSS_HASH_ALG_SUPPORT'] = '+MD5'
+
 # This application object is used by any WSGI server configured to use this
 # file. This includes Django's development server, if the WSGI_APPLICATION
 # setting points here.
