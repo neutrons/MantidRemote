@@ -136,8 +136,15 @@ def download( request):
     
     # compose the filename to transfer
     filename = os.path.join( trans.directory, request.GET['File'])
-    resp = HttpResponse( open(filename).read(), content_type='application/octet-stream' )
-    resp['Content-Disposition'] = 'attachment; filename="%s"'%request.GET['File']
+    try:
+        resp = HttpResponse( open(filename).read(), content_type='application/octet-stream' )
+        resp['Content-Disposition'] = 'attachment; filename="%s"'%request.GET['File']
+    except IOError, msg:
+        if msg.errno == 2:  # Errno 2 is a 'file not found'
+            json_out = json_err_msg( "Could not find a file named %s associated with transaction %s"%(request.GET['File'],trans.id))
+        else:
+            json_out = json_err_msg( "Unknown error attempting to download %s"%request.GET['File'])
+        resp = HttpResponse(json_out, status=400)
     return resp
 
 
@@ -186,12 +193,12 @@ def files( request):
     # will be no subdirs, but we'll support them having them)
     files = [ ]
     dirs = os.walk( trans.directory)
-    for dir in dirs:
+    for one_dir in dirs:
         # Remove the parts of the path that include the transaction directory
         # (and everything above it) because we don't want to expose this data
         # to users
-        subpath = dir[0][len(trans.directory)+1:]
-        for f in dir[2]:
+        subpath = one_dir[0][len(trans.directory)+1:]
+        for f in one_dir[2]:
             files.append( os.path.join(subpath, f))
     
     files.sort()  # Not sure this is really helpful, but it probably doesn't hurt
@@ -308,4 +315,11 @@ def validate_trans_id( request):
     
     return (trans, None)
     
+def json_err_msg( msg):
+    '''
+    Generates the proper JSON string for returning the specified error message in an HttpResponse object.
+    '''
+    # The name 'Err_Msg' is defined by the API doc
+    out = { "Err_Msg" : msg}
+    return json.dumps( out) 
     
