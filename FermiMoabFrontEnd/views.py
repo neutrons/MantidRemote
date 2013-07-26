@@ -21,6 +21,10 @@ def info( request):
     json_output = { }
     json_output['API_Version'] = settings.API_VERSION
     json_output['API_Extensions'] = settings.API_EXTENSIONS
+    
+    # Note: This value must match what the submit view requires! It'd be nice if
+    # we could figure out a way to automatically keep it in sync with the submit view...
+    json_output['Implementation_Specific_Submit_Variables'] = ['NumNodes', 'CoresPerNode']
 
     resp = HttpResponse( json.dumps(json_output))
     return resp
@@ -208,6 +212,35 @@ def files( request):
     return HttpResponse( json.dumps(json_out), status=200)
     
     
+@logged_in_or_basicauth()
+def submit( request):
+    # Verify the that we have the proper request parameters
+    if request.method != 'POST':
+        return HttpResponse( err_not_get(), status=400)  # Bad request
+    
+    (trans, error_response) = validate_trans_id( request)
+    if error_response != None:
+        # TransID didn't validate...
+        return error_response
+    
+    if not 'NumNodes' in request.POST:
+        return (None, HttpResponse( err_missing_param( 'NumNodes'), status=400))  # Bad request
+    
+    if not 'CoresPerNode' in request.POST:
+        return (None, HttpResponse( err_missing_param( 'CoresPerNode'), status=400))  # Bad request
+    
+    # Save the uploaded python script to the transaction directory
+
+    # Generate the bash script that will actually be run by Moab/Torque
+    
+    # Generate the JSON that's submitted to Moab Web Services
+    
+    # Make the HTTP call
+    
+    # Return the Job ID to the user
+
+
+
 
 @logged_in_or_basicauth()
 def query( request):

@@ -30,6 +30,9 @@ class FermiTestCase( TestCase):
         self.assertIn('API_Extensions', result)
         self.assertEqual( result['API_Version'], 0)
         self.assertEqual( len( result['API_Extensions']), 0)
+        self.assertIn('Implementation_Specific_Submit_Variables', result)
+        self.assertEqual( result['Implementation_Specific_Submit_Variables'],
+                          ['NumNodes', 'CoresPerNode'])
         
     def test_authenticate(self):
         c = Client()
