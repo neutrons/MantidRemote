@@ -195,3 +195,10 @@ LDAP_HOST = "ldaps://data.sns.gov/"
 LDAP_BASE_DN = "dc=sns,dc=ornl,dc=gov"
 LDAP_FILTER = "(&(objectClass=posixGroup)(cn=SNS_Neutron))"
 
+
+# Location & login info for the MWS server
+MWS_URL = "http://chadwick.sns.gov:8080/mws/rest"
+MWS_USER = "admin"                                                                                         
+MWS_PASS = "5N5t3stBOX"
+# TODO: fill in parameters for Fermi!!  
+

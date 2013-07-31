@@ -1,14 +1,17 @@
 from django.http import HttpResponse
 from django.conf import settings
 
-from models import Transaction
+from models import Transaction, Job
 
 from MantidRemote.BasicAuthHelper import logged_in_or_basicauth
+from bash_script import generate_bash_script
 
-import datetime
+import base64
 import json
 import os
 import subprocess
+import urllib2
+
 
 
 def info( request):
@@ -229,69 +232,195 @@ def submit( request):
     if not 'CoresPerNode' in request.POST:
         return (None, HttpResponse( err_missing_param( 'CoresPerNode'), status=400))  # Bad request
     
+    # Verify the request parameters for the python script
+    if not 'ScriptName' in request.POST:
+        return (None, HttpResponse( err_missing_param( 'ScriptName'), status=400))  # Bad request
+    
+    script_name = request.POST['ScriptName']
+    if not script_name in request.POST:
+        return (None, HttpResponse( "Expected POST variable %s not received"%script_name, status=400))  # Bad request
+    
     # Save the uploaded python script to the transaction directory
+    script_file = open( os.path.join( trans.directory, script_name), 'w')
+    script_file.write( request.POST[script_name])
+    script_file.close() 
+    # TODO: Do we need to provide some kind of protection against one script overwriting an existing one of the same name??
 
-    # Generate the bash script that will actually be run by Moab/Torque
+    # Generate the bash script that will actually be run by Moab/Torque 
+    submit_file = open(os.path.join( trans.directory, 'submit.sh'), 'w')
+    submit_file.write( generate_bash_script( NUM_NODES=request.POST['NumNodes'],
+                                             CORES_PER_NODE=request.POST['CoresPerNode'],
+                                             TRANSACTION_DIRECTORY=trans.directory,
+                                             PYTHON_JOB_SCRIPT=script_name))
+    # TODO: Can't hard-code submit.sh.  Need to allow for more than one job to be submitted in a transaction
+    submit_file.close()
     
     # Generate the JSON that's submitted to Moab Web Services
+    submit_json = {}
+    submit_json['commandFile'] = submit_file.name 
+    submit_json['commandLineArguments'] = ""
+    submit_json['user'] = request.user.username
+    submit_json['group']
+    submit_json['name']
+    
+    submit_json['requirements'] = {"requiredProcessorCountMinimum": request.POST['NumNodes']}
+    # Yes, this is confusing, but the way we've got Moab configured on Femi,
+    # requiredProcessorCountMinimum actually specifies the number of NODES
+    # that are reserved for the job.
+    
+    # This isn't necessary for Moab to schedule the job.  However, by setting the variable,
+    # we can distinguish between jobs that were submitted via this mechanism and stuff that
+    # the user might have just qsub'd...
+    # Note: Last I knew, a bug in MWS meant these variables were forgotten.  Not sure if this
+    # has been fixed yet. 
+    submit_json['variables'] = {"JOB_TYPE":"Mantid"}
+    submit_json['standardErrorFilePath'] = trans.directory
+    submit_json['standardOutputFilePath'] = trans.directory
+    
+    # This is just an example so I remember how to set environment variables in case I
+    # ever need to.  Leave it commented out.
+    #submit_json['environmentVariables'] = {"MANTIDPLOT_NUM_NODES" : request.POST['NumNodes']}
     
     # Make the HTTP call
+    return_code,json_result = mws_request(settings.MWS_URL + "/jobs", submit_json)
+    if return_code == 200:
+        # Success Return the Job ID to the user
+        json_out = { }
+        json_out['JobID'] = json_result['id']
+        
+        # Add the job object to the local db
+        new_job = Job()
+        new_job.transaction = trans
+        new_job.script_name = script_name
+        new_job.mws_job_id = json_result['id'];
+        new_job.save()
+    else:
+        json_out = { }
+        if 'messages' in json_result:
+            # The messages field returned by MWS is actually an array.  Most of the
+            # time it will just have 1 entry, but it could have multiple. 
+            mws_messages = json_result['id']
+            return_err_msg = "Error returned from Moab Web Services: %s"%mws_messages[0]
+            for err_msg in mws_messages[1:]:
+                return_err_msg += ", %s"%err_msg
+                      
+            json_out['ErrMsg'] = "Error returned from Moab Web Services: %s"%json_result['id']
+            
+    return HttpResponse( json.dumps(json_out), status=return_code)
     
-    # Return the Job ID to the user
-
-
-
 
 @logged_in_or_basicauth()
 def query( request):
-    resp = HttpResponse()
-    resp.write("<html>")
-    resp.write("<H2>Congratulations!</H2></br>")
-    resp.write("You've managed to call the query view.")
-    resp.write("<hr>")
-
-    # show some session info...
-    resp.write("Session:</br>")
-    resp.write("<ul>")
-    keys = request.session.keys()
-    keys.sort()
-    for key in keys:
-        resp.write("<li> %s: %s /<li>"%(key, request.session.get(key)))
+    '''
+    View for displaying info about 1 specific job or all of a user's jobs
+    '''
+    
+    # Verify the that we have the proper request parameters
+    if request.method != 'GET':
+        return HttpResponse( err_not_get(), status=400)  # Bad request
+    
+    # There's two forms of this view: one for querying all of a user's jobs
+    # and one for just querying a specific job
+    query_url = settings.MWS_URL + "/jobs"
+    if 'JobID' in request.GET:
+        # Check to see if the requested job ID is valid (ie, it exists and it
+        # was submitted by the current user
+        job = Job.objects.get( mws_job_id = request.GET['JobID'])
+        (job, error_response) = validate_job_id( request)
+        if error_response != None:
+            # The JobID didn't validate...
+            return error_response 
         
-    resp.write("</ul>")
-    resp.write("<hr>")
+        # query url for one job
+        query_url += "/" + request.GET['JobID']
     
-    if 'flush' in request.GET.keys():
-        # Flush the session
-        resp.write ("Flushing session")
-        resp.write( "<hr>")
-        request.session.flush()
+    return_code,json_result = mws_request(query_url)
     
-    # Play with sessions a bit - add a new key each time we're called
-    num_keys = len(request.session.keys())
-    new_key = "call_num_%d"%num_keys
-    request.session[new_key]= str( datetime.datetime.now())  # @UndefinedVariable
+    if return_code == 200:
+        # Success! Parse the returned JSON for the data we want
+        # Note: If we requested all jobs, then the data is buried a 
+        # couple levels deeper than if we only requested a specific job
+        if 'JobID' in request.GET:
+            jobs = [ ]
+            jobs.append( json_result)
+        else:
+            jobs = json_result['results']
+            
+        # Note: the results for a single job query are considerably more
+        # detailed than those returned by the 'query all jobs' request.
+        json_out = { }
+        for job in jobs:
+            # First, filter out all the jobs from other users
+            if job['user'] == request.user.username:
+                
+                job_obj = Job.objects.get( mws_job_id = job['id'])
+                if job_obj is not None:
+                    # We don't return data for jobs not in our local db.
+                    # Assuming it's not a bug of some kind, then such jobs
+                    # were not submitted through this web service and we're
+                    # not going to try to manage them.
+                    job_data = { }
+                    job_data['JobName'] = job['name']
+                    job_data['JobStatus'] = job['state']
+                    
+                    # Transaction ID and script name come from the local db.
+                    # (Moab Web Services has no concept of either.)
+                    job_data['TransId'] = job_obj.transaction.id
+                    job_data['ScriptName'] = job_obj.script_name
+                    
+                    json_out[job['id']] = job_data
+    
+    else:  # MWS returned something other than 200
+        # TODO: The MWS docs don't mention exactly what will be returned if there's
+        # an error.  I'm assuming it's a similar structure to the error returned
+        # when a job submit fails.  I need to test this condition, though!
+        json_out = { }
+        if 'messages' in json_result:
+            # The messages field returned by MWS is actually an array.  Most of the
+            # time it will just have 1 entry, but it could have multiple. 
+            mws_messages = json_result['id']
+            return_err_msg = "Error returned from Moab Web Services: %s"%mws_messages[0]
+            for err_msg in mws_messages[1:]:
+                return_err_msg += ", %s"%err_msg
+                      
+            json_out['ErrMsg'] = "Error returned from Moab Web Services: %s"%json_result['id']
+
     
     
-    # display the request headers...
-    resp.write("<ul>")
-    for hdr in request.META:
-        resp.write("<li> %s: %s /<li>"%(hdr, request.META[hdr]))
-    
-    resp.write("</ul>")
-    resp.write("<br>")
-    
-    # display the query string
-    resp.write("<ul>")
-    for key in request.GET:
-        resp.write("<li> %s: %s /<li>"%(key, request.GET[key]))
-    
-    resp.write("</ul>")
-    resp.write("<br>")
+    return HttpResponse( json.dumps(json_out), status=return_code)
     
     
-    resp.write("</html>")
-    return resp
+
+
+def mws_request( url, post_data=None):
+    '''
+    Sends an HTTP (or HTTPS) request to the MWS server and returns the results.
+    
+    Used as a helper by several view funtions
+    
+    url is a string
+    post_data can be any type.  If it's not None, it will be converted to a JSON string
+    
+    Returns the http status code and a dictionary containing any JSON data that was returned from MWS
+    '''
+    
+    encoded_pwd = base64.b64encode( '%s:%s'%(settings.MWS_USER, settings.MWS_PASS))
+    req = urllib2.Request(url)
+    # NOTE: There's a warning in the urllib2 docs saying that it does not verify the
+    # server's certificate when making HTTPS connections
+    
+    req.add_header('Authorization', 'Basic %s'%encoded_pwd)
+    if post_data != None:
+        req.add_header( "Content-Type", "application/json")
+        # Note: Passing anything to the data field of the urlopen() function
+        # means the function will make a POST request instead of a GET request.
+        # This is exactly the behavior we want.
+        result = urllib2.urlopen(req, json.dumps(post_data))
+    else:
+        result = urllib2.urlopen(req)
+        
+    json_result = json.loads( result.read())
+    return result.getcode(), json_result
 
 
 def recursive_rm( dirname):
@@ -316,7 +445,34 @@ def recursive_rm( dirname):
     for i in range(len(dirnames)-1, -1, -1):
         os.rmdir(dirnames[i])
 
-
+def validate_job_id( request):
+    '''
+    Verify that the specified job ID exists and is owned by the current user.
+    
+    Returns a tuple of the job object from the database (if everything
+    validated) and an HttpResponse object (if there was an error).  One of the
+    items in the tuple will be None.
+    
+    Helper function for the query view
+    '''
+    if not 'JobID' in request.GET:
+        return (None, HttpResponse( err_missing_param( 'JobID'), status=400))  # Bad request
+    
+    job = Job.objects.get( mws_job_id = request.GET['JobID'])
+    
+    if job is None:
+        return (None, HttpResponse( "Job '%s' does not exist"%request.GET['JobId'],
+                                    status = 400))
+        
+    if job.transaction.owner.username != request.user.username:
+        # TODO: can we just compare owner to user instead of going all the way down to the username level?
+        # Note: This is a bit of security concern since we effectively 
+        # acknowledge the existence of a job the user doesn't own.  Should we
+        # return a 'does not exist' error instead?
+        return (None, HttpResponse( "Job '%s' is not owned by "%request.user.username,
+                                    status = 400)) 
+    return(job, None)
+    
 def validate_trans_id( request):
     '''
     Verify that a transaction ID was specified, that the transaction exists

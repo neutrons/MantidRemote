@@ -11,22 +11,29 @@ class Transaction( models.Model):
 class Job( models.Model):
     # Choices for the last_status field
     # These are part of the API and changing them requires rev'ing the API version
-    QUEUED='queued'
-    RUNNING='running'
-    COMPLETE='cmplt'
-    ABORTED='aborted'
-    UNKNOWN='unknown'
-    STATUS_CHOICES = (
-          (QUEUED, "Queued"),
-          (RUNNING, 'Running'),
-          (COMPLETE, 'Complete'),
-          (ABORTED, 'Aborted'),
-          (UNKNOWN, 'Unknown'),)
+#    QUEUED='queued'
+#    RUNNING='running'
+#    COMPLETE='cmplt'
+#    ABORTED='aborted'
+#    UNKNOWN='unknown'
+#    STATUS_CHOICES = (
+#          (QUEUED, "Queued"),
+#          (RUNNING, 'Running'),
+#          (COMPLETE, 'Complete'),
+#          (ABORTED, 'Aborted'),
+#          (UNKNOWN, 'Unknown'),)
                       
     transaction = models.ForeignKey( 'Transaction')
-    last_status = models.CharField( max_length = 7,
-                                    choices = STATUS_CHOICES,
-                                    default = UNKNOWN)
+#    last_status = models.CharField( max_length = 7,
+#                                    choices = STATUS_CHOICES,
+#                                    default = UNKNOWN)
+    # The ID string returned from MoabWebServices when we submit a new job. Can't use
+    # Django's built-in id field because MWS ID's aren't limited to integers.
+    # 30 is just a guess for the max length, but should be sufficient
+    mws_job_id = models.CharField( max_length = 30) 
+    
+    # The actual python script that was executed.
+    script_name = models.CharField( max_length = 125)
     
 class File( models.Model):
     transaction = models.ForeignKey( 'Transaction')
