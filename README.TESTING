@@ -1,0 +1,54 @@
+Some random notes about testing.
+
+-------------------------------------------------------------------------------
+selinux
+-------
+
+A note about SELinux:
+If SELinux is enabled on the server, then the following values will need to be
+set to true (using setsebool)
+
+ httpd_can_connect_ldap
+ httpd_can_network_connect
+
+-------------------------------------------------------------------------------
+ldap
+----
+
+The SNS ldap server uses a certificate signed with an MD5 hash.  Newer versions
+of sssd won't accept that any more.  As a workaround, export:
+
+NSS_HASH_ALG_SUPPORT="+MD5"
+
+prior to starting httpd.
+
+OR: add a line to wsgi.py to export the varible there.
+
+-------------------------------------------------------------------------------
+Useful curl commands
+--------------------
+The following curl command can be used to upload files:
+
+Authenticate to the web service:
+curl -c curl_cookie_jar -b curl_cookie_jar --basic --user xmr localhost:8000/authenticate
+
+Start a transaction:
+curl -c curl_cookie_jar -b curl_cookie_jar localhost:8000/transaction?Action=Start
+
+Upload files:
+curl -X POST -F ESG_Docs.odt=@ESG_Docs.odt -F condor_demo.py=@condor_demo.py -F Firefox_wallpaper.png=@Firefox_wallpaper.png  -F TransID=4 -c curl_cookie_jar -b curl_cookie_jar --basic --user xmr localhost:8000/upload
+
+Submit a job:
+curl -X POST -F TransID=4 -F NumNodes=2 -F CoresPerNode=8 -F ScriptName=test.py -f test.py="print 'Hello World'" -c curl_cookie_jar -b curl_cookie_jar localhost:8000/submit
+
+List files:
+curl -c curl_cookie_jar -b curl_cookie_jar localhost:8000/files\?TransID=4
+
+Query:
+curl -c curl_cookie_jar -b curl_cookie_jar localhost:8000/query
+curl -c curl_cookie_jar -b curl_cookie_jar localhost:8000/query?JobId=MWSSim.940
+
+Stop a transaction:
+curl -c curl_cookie_jar -b curl_cookie_jar localhost:8000/transaction?Action=Stop\&TransID=3
+
+-------------------------------------------------------------------------------
