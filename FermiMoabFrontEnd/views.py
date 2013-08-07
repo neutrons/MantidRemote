@@ -240,19 +240,35 @@ def submit( request):
     if not script_name in request.POST:
         return HttpResponse( "Expected POST variable %s not received"%script_name, status=400)  # Bad request
     
-    # Save the uploaded python script to the transaction directory
-    script_file = open( os.path.join( trans.directory, script_name), 'w')
+    # Make sure we don't overwrite an existing script with a new one of the same name
+    # TODO: Technically, this is a race condition: it's theoretically possible for a user
+    # to send 2 requests simultaneously with the same script name and have one overwritten
+    # because neither existed at the time isfile() was called.  Not sure what to do about
+    # this: some web servers spawn multiple processes, so a regular mutex or critical
+    # section won't help.
+    full_script_name = os.path.join( trans.directory, script_name)
+    file_num=0
+    while (os.path.isfile( full_script_name)):
+        file_num += 1
+        full_script_name = os.path.join( trans.directory, "%s-%d"%(script_name, file_num))
+    
+    # Save the uploaded python script to the transaction directory    
+    script_file = open( full_script_name, 'w')
     script_file.write( request.POST[script_name])
     script_file.close() 
-    # TODO: Do we need to provide some kind of protection against one script overwriting an existing one of the same name??
 
-    # Generate the bash script that will actually be run by Moab/Torque 
-    submit_file = open(os.path.join( trans.directory, 'submit.sh'), 'w')
+    # Generate the bash script that will actually be run by Moab/Torque
+    # TODO: see the comments above about the race condition with file names
+    submit_file_name = os.path.join( trans.directory, 'submit.sh')
+    file_num=0
+    while (os.path.isfile( submit_file_name)):
+        file_num += 1
+        submit_file_name = os.path.join( trans.directory, 'submit.sh-%d'%file_num) 
+    submit_file = open(submit_file_name, 'w')
     submit_file.write( generate_bash_script( NUM_NODES=request.POST['NumNodes'],
                                              CORES_PER_NODE=request.POST['CoresPerNode'],
                                              TRANSACTION_DIRECTORY=trans.directory,
                                              PYTHON_JOB_SCRIPT=script_name))
-    # TODO: Can't hard-code submit.sh.  Need to allow for more than one job to be submitted in a transaction
     submit_file.close()
     
     # Generate the JSON that's submitted to Moab Web Services
