@@ -227,18 +227,18 @@ def submit( request):
         return error_response
     
     if not 'NumNodes' in request.POST:
-        return (None, HttpResponse( err_missing_param( 'NumNodes'), status=400))  # Bad request
+        return HttpResponse( err_missing_param( 'NumNodes'), status=400)  # Bad request
     
     if not 'CoresPerNode' in request.POST:
-        return (None, HttpResponse( err_missing_param( 'CoresPerNode'), status=400))  # Bad request
+        return HttpResponse( err_missing_param( 'CoresPerNode'), status=400)  # Bad request
     
     # Verify the request parameters for the python script
     if not 'ScriptName' in request.POST:
-        return (None, HttpResponse( err_missing_param( 'ScriptName'), status=400))  # Bad request
+        return HttpResponse( err_missing_param( 'ScriptName'), status=400)  # Bad request
     
     script_name = request.POST['ScriptName']
     if not script_name in request.POST:
-        return (None, HttpResponse( "Expected POST variable %s not received"%script_name, status=400))  # Bad request
+        return HttpResponse( "Expected POST variable %s not received"%script_name, status=400)  # Bad request
     
     # Save the uploaded python script to the transaction directory
     script_file = open( os.path.join( trans.directory, script_name), 'w')
@@ -260,8 +260,8 @@ def submit( request):
     submit_json['commandFile'] = submit_file.name 
     submit_json['commandLineArguments'] = ""
     submit_json['user'] = request.user.username
-    submit_json['group']
-    submit_json['name']
+    submit_json['group'] = 'users'
+    submit_json['name'] = 'ChangeMe!!'
     
     submit_json['requirements'] = {"requiredProcessorCountMinimum": request.POST['NumNodes']}
     # Yes, this is confusing, but the way we've got Moab configured on Femi,
@@ -352,13 +352,8 @@ def query( request):
         for job in jobs:
             # First, filter out all the jobs from other users
             if job['user'] == request.user.username:
-                
-                job_obj = Job.objects.get( mws_job_id = job['id'])
-                if job_obj is not None:
-                    # We don't return data for jobs not in our local db.
-                    # Assuming it's not a bug of some kind, then such jobs
-                    # were not submitted through this web service and we're
-                    # not going to try to manage them.
+                try:
+                    job_obj = Job.objects.get( mws_job_id = job['id'])
                     job_data = { }
                     job_data['JobName'] = job['name']
                     job_data['JobStatus'] = job['state']
@@ -369,6 +364,14 @@ def query( request):
                     job_data['ScriptName'] = job_obj.script_name
                     
                     json_out[job['id']] = job_data
+                except Job.DoesNotExist:
+                    # We don't return data for jobs not in our local db.
+                    # Assuming it's not a bug of some kind, then such jobs
+                    # were not submitted through this web service and we're
+                    # not going to try to manage them.
+                    # Or, the user already ended the transaction and we're just
+                    # waiting for MWS to forget about them on its own
+                    pass
     
     else:  # MWS returned something other than 200
         # TODO: The MWS docs don't mention exactly what will be returned if there's
