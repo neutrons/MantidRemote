@@ -127,8 +127,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
-    
-    'FermiMoabFrontEnd',
+    'FermiMoabFrontEnd'
 )
 
 # A sample logging configuration. The only tangible logging
@@ -166,7 +165,7 @@ AUTHENTICATION_BACKENDS = (
    # The normal auth method is to check the LDAP server.  We've
    # got the ModelBackend here so that we can add a couple of
    # admin users without having to set some extra fields in the
-   # LDAP record.  Not entirely convinced this is a good idea, though.  
+   # LDAP record.  Not entirely convinced this is a good idea, though.
 )
 
 
@@ -197,8 +196,8 @@ LDAP_FILTER = "(&(objectClass=posixGroup)(cn=SNS_Neutron))"
 
 
 # Location & login info for the MWS server
-MWS_URL = "http://chadwick.sns.gov:8080/mws/rest"
+#MWS_URL = "http://chadwick.sns.gov:8080/mws/rest"
+MWS_URL = 'http://127.0.0.1:8001/mws/rest'  # for testing with the MWS simulator
 MWS_USER = "admin"                                                                                         
 MWS_PASS = "5N5t3stBOX"
 # TODO: fill in parameters for Fermi!!  
-

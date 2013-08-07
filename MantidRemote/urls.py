@@ -27,5 +27,5 @@ urlpatterns += patterns( 'FermiMoabFrontEnd.views',
     url(r'^(?i)upload$', 'upload', name='upload_url'),
     url(r'^(?i)files$', 'files', name='files_url'),
     url(r'^(?i)submit$', 'submit', name='submit_url'),
-#    url(r'^(?i)query$', 'query', name='query_url'),
+    url(r'^(?i)query$', 'query', name='query_url'),
 )
