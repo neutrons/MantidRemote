@@ -181,7 +181,7 @@ API_EXTENSIONS = []
 
 # Location of the 'scratch' directory where the server
 # can create directories for each transaction
-#TRANSACTION_DIR='/var/www/apache_scratch'
+#TRANSACTION_DIR='/lustre/snsfs/scratch/apache'
 TRANSACTION_DIR='/tmp/apache_scratch' # used for test/debug
 
 # Location of the setfacl binary
@@ -197,6 +197,7 @@ LDAP_FILTER = "(&(objectClass=posixGroup)(cn=SNS_Neutron))"
 
 # Location & login info for the MWS server
 #MWS_URL = "http://chadwick.sns.gov:8080/mws/rest"
+#MWS_URL = 'http://fermi-mgmt3.ornl.gov:8080/mws/rest'
 MWS_URL = 'http://127.0.0.1:8001/mws/rest'  # for testing with the MWS simulator
 MWS_USER = "admin"                                                                                         
 MWS_PASS = "5N5t3stBOX"
