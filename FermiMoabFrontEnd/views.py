@@ -274,16 +274,18 @@ def submit( request):
     
     # Generate the JSON that's submitted to Moab Web Services
     submit_json = {}
-    submit_json['commandFile'] = submit_file.name 
-    submit_json['commandLineArguments'] = ""
+    submit_json['commandFile'] =  "/bin/bash"
+    submit_json['commandLineArguments'] = submit_file.name
     submit_json['user'] = request.user.username
     submit_json['group'] = 'users'
     submit_json['name'] = 'ChangeMe!!'
     
-    submit_json['requirements'] = {"requiredProcessorCountMinimum": request.POST['NumNodes']}
+    submit_json['requirements'] = [ {"requiredProcessorCountMinimum": request.POST['NumNodes']} ]
     # Yes, this is confusing, but the way we've got Moab configured on Femi,
     # requiredProcessorCountMinimum actually specifies the number of NODES
     # that are reserved for the job.
+    # Also, for reasons that have never been clear, MWS wants the requirements field to be a list
+    # containing a single object (instead of just the object itself...)
     
     # This isn't necessary for Moab to schedule the job.  However, by setting the variable,
     # we can distinguish between jobs that were submitted via this mechanism and stuff that
@@ -300,7 +302,7 @@ def submit( request):
     
     # Make the HTTP call
     return_code,json_result = mws_request(settings.MWS_URL + "/jobs", submit_json)
-    if return_code == 200:
+    if return_code == 201:
         # Success Return the Job ID to the user
         json_out = { }
         json_out['JobID'] = json_result['id']
@@ -335,7 +337,6 @@ def query( request):
     if 'JobID' in request.GET:
         # Check to see if the requested job ID is valid (ie, it exists and it
         # was submitted by the current user
-        job = Job.objects.get( mws_job_id = request.GET['JobID'])
         (job, error_response) = validate_job_id( request)
         if error_response != None:
             # The JobID didn't validate...
@@ -474,10 +475,10 @@ def validate_job_id( request):
     if not 'JobID' in request.GET:
         return (None, HttpResponse( err_missing_param( 'JobID'), status=400))  # Bad request
     
-    job = Job.objects.get( mws_job_id = request.GET['JobID'])
-    
-    if job is None:
-        return (None, HttpResponse( "Job '%s' does not exist"%request.GET['JobId'],
+    try:
+        job = Job.objects.get( mws_job_id = request.GET['JobID'])
+    except Job.DoesNotExist:
+        return (None, HttpResponse( json_err_msg("Job '%s' does not exist"%request.GET['JobID']),
                                     status = 400))
         
     if job.transaction.owner.username != request.user.username:
@@ -485,7 +486,7 @@ def validate_job_id( request):
         # Note: This is a bit of security concern since we effectively 
         # acknowledge the existence of a job the user doesn't own.  Should we
         # return a 'does not exist' error instead?
-        return (None, HttpResponse( "Job '%s' is not owned by "%request.user.username,
+        return (None, HttpResponse( json_err_msg("Job '%s' is not owned by "%request.user.username),
                                     status = 400)) 
     return(job, None)
     
@@ -531,7 +532,7 @@ def json_err_msg( msg):
     '''
     # The name 'Err_Msg' is defined by the API doc
     out = { "Err_Msg" : msg}
-    return json.dumps( out) 
+    return json.dumps( out, indent=2) 
 
 # JSON output for some standard, oft-used error messages
 def err_not_get():
