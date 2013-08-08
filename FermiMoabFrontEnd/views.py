@@ -9,6 +9,7 @@ from bash_script import generate_bash_script
 import base64
 import json
 import os
+import sys
 import subprocess
 import urllib2
 
@@ -312,17 +313,10 @@ def submit( request):
         new_job.save()
     else:
         json_out = { }
-        if 'messages' in json_result:
-            # The messages field returned by MWS is actually an array.  Most of the
-            # time it will just have 1 entry, but it could have multiple. 
-            mws_messages = json_result['id']
-            return_err_msg = "Error returned from Moab Web Services: %s"%mws_messages[0]
-            for err_msg in mws_messages[1:]:
-                return_err_msg += ", %s"%err_msg
-                      
-            json_out['ErrMsg'] = "Error returned from Moab Web Services: %s"%json_result['id']
-            
-    return HttpResponse( json.dumps(json_out), status=return_code)
+        json_out['Err_Msg'] = "Error returned from Moab Web Services"
+        json_out['MWS_Err_Msg'] = json_result   
+        
+    return HttpResponse( json.dumps(json_out, indent=2), status=return_code)
     
 
 @logged_in_or_basicauth()
@@ -394,19 +388,10 @@ def query( request):
         # an error.  I'm assuming it's a similar structure to the error returned
         # when a job submit fails.  I need to test this condition, though!
         json_out = { }
-        if 'messages' in json_result:
-            # The messages field returned by MWS is actually an array.  Most of the
-            # time it will just have 1 entry, but it could have multiple. 
-            mws_messages = json_result['id']
-            return_err_msg = "Error returned from Moab Web Services: %s"%mws_messages[0]
-            for err_msg in mws_messages[1:]:
-                return_err_msg += ", %s"%err_msg
-                      
-            json_out['ErrMsg'] = "Error returned from Moab Web Services: %s"%json_result['id']
-
+        json_out['Err_Msg'] = "Error returned from Moab Web Services"
+        json_out['MWS_Err_Msg'] = json_result
     
-    
-    return HttpResponse( json.dumps(json_out), status=return_code)
+    return HttpResponse( json.dumps(json_out, indent=2), status=return_code)
     
     
 
@@ -429,17 +414,29 @@ def mws_request( url, post_data=None):
     # server's certificate when making HTTPS connections
     
     req.add_header('Authorization', 'Basic %s'%encoded_pwd)
-    if post_data != None:
-        req.add_header( "Content-Type", "application/json")
-        # Note: Passing anything to the data field of the urlopen() function
-        # means the function will make a POST request instead of a GET request.
-        # This is exactly the behavior we want.
-        result = urllib2.urlopen(req, json.dumps(post_data))
-    else:
-        result = urllib2.urlopen(req)
-        
-    json_result = json.loads( result.read())
-    return result.getcode(), json_result
+    try:
+        if post_data != None:
+            req.add_header( "Content-Type", "application/json")
+            # Note: Passing anything to the data field of the urlopen() function
+            # means the function will make a POST request instead of a GET request.
+            # This is exactly the behavior we want.
+            result = urllib2.urlopen(req, json.dumps(post_data))
+        else:
+            result = urllib2.urlopen(req)
+            
+        json_result = json.loads( result.read())
+        status_code = result.getcode()
+    except urllib2.HTTPError, e:
+        # urllib2 seems to throw these in any case where the status code
+        # was not 2xx
+        json_result = json.load(e) # calls e.read()...
+        print >>sys.stderr, "Error returned from MWS server.  Code: %d"%e.code       
+        print >>sys.stderr,  "Message returned from MWS:"
+        json.dump(json_result, sys.stderr, indent=2)
+        sys.stderr.flush()
+        status_code = e.code;
+    
+    return status_code, json_result
 
 
 def recursive_rm( dirname):
