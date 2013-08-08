@@ -240,7 +240,7 @@ def submit( request):
     script_name = request.POST['ScriptName']
     if not script_name in request.POST:
         return HttpResponse( "Expected POST variable %s not received"%script_name, status=400)  # Bad request
-    
+       
     # Make sure we don't overwrite an existing script with a new one of the same name
     # TODO: Technically, this is a race condition: it's theoretically possible for a user
     # to send 2 requests simultaneously with the same script name and have one overwritten
@@ -278,7 +278,12 @@ def submit( request):
     submit_json['commandLineArguments'] = submit_file.name
     submit_json['user'] = request.user.username
     submit_json['group'] = 'users'
-    submit_json['name'] = 'ChangeMe!!'
+    
+    # The job name parameter is optional
+    if 'JobName' in request.POST:
+        submit_json['name'] = request.POST['JobName']
+    else:
+        submit_json['name'] = "Unknown"
     
     submit_json['requirements'] = [ {"requiredProcessorCountMinimum": request.POST['NumNodes']} ]
     # Yes, this is confusing, but the way we've got Moab configured on Femi,
