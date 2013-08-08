@@ -39,7 +39,7 @@ Upload files:
 curl -X POST -F ESG_Docs.odt=@ESG_Docs.odt -F condor_demo.py=@condor_demo.py -F Firefox_wallpaper.png=@Firefox_wallpaper.png  -F TransID=4 -c curl_cookie_jar -b curl_cookie_jar --basic --user xmr localhost:8000/upload
 
 Submit a job:
-curl -X POST -F TransID=4 -F NumNodes=2 -F CoresPerNode=8 -F ScriptName=test.py -f test.py="print 'Hello World'" -c curl_cookie_jar -b curl_cookie_jar localhost:8000/submit
+curl -X POST -F TransID=4 -F NumNodes=2 -F CoresPerNode=8 -F ScriptName=test.py -F test.py="print 'Hello World'" -c curl_cookie_jar -b curl_cookie_jar localhost:8000/submit
 
 List files:
 curl -c curl_cookie_jar -b curl_cookie_jar localhost:8000/files\?TransID=4
