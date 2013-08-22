@@ -14,6 +14,10 @@ framework.
 
 """
 import os
+import sys
+
+sys.path.append('/var/www/MantidRemote')  # This needs to match where the app is actually deployed
+#sys.path.append('/var/www/MantidRemote/MantidRemote')
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "MantidRemote.settings")
 
