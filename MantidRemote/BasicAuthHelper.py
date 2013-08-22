@@ -13,6 +13,7 @@
 #
 
 import base64
+import json
 
 from django.http import HttpResponse
 from django.contrib.auth import authenticate, login
@@ -25,7 +26,7 @@ def view_or_basicauth(view, request, test_func, realm = "", *args, **kwargs):
     'has_perm_or_basicauth' that does the nitty of determining if they
     are already logged in or if they have provided proper http-authorization
     and returning the view if all goes well, otherwise responding with a 401.
-    """
+    """   
     if test_func(request.user):
         # Already logged in, just return the view.
         #
@@ -51,7 +52,15 @@ def view_or_basicauth(view, request, test_func, realm = "", *args, **kwargs):
     # something in the authorization attempt failed. Send a 401
     # back to them to ask them to authenticate.
     #
-    response = HttpResponse()
+    err_json = { }
+    if  'HTTP_AUTHORIZATION' in request.META:
+        # The user passed in a name/pwd combo, but it must have failed
+        err_json["Err_Msg"] = "Authentication failed: Bad username/password combination"
+    else:
+        # no name/pwd combo, so session cookie was missing (or invalid)
+        err_json["Err_Msg"] = "Authentication failed: Session cookie missing or invalid"
+        
+    response = HttpResponse(json.dumps( err_json))
     response.status_code = 401
     response['WWW-Authenticate'] = 'Basic realm="%s"' % realm
     return response
