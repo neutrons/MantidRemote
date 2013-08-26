@@ -32,13 +32,17 @@ class SnsLdapBackend(object):
             if not username in search_results[0][1]['memberUid']:
                 return None
 
-        except:
-            # TODO: catch specific exception so we can log errors.
-            # Note: especially the one about the server certificate being signed with MD5
-            # (which is no longer considered secure and openldap, by default, won't accept
-            # it.)
+        except ldap.LDAPError, e:
+            print >>sys.stderr,  "LDAP Exception (%s)"%e.__class__.__name__ 
+            print >>sys.stderr, "Message(s):"
+            for key in e.message:
+                print >> sys.stderr, "%s: %s"%(key, e.message[key])
+            sys.stderr.flush()
             return None
-        
+
+        except:
+            return None
+               
         # If we made it this far, we were able to bind to the ldap server and the
         # user has the proper permissions to submit jobs.  Fetch the user object
         # that's in the database (or create one, if necessary).
@@ -49,10 +53,10 @@ class SnsLdapBackend(object):
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            # Create a new user. Note that we can set password
-            # to anything, because it won't be checked; the password
-            # from settings.py will.
-            user = User(username=username, password='USE LDAP SERVER FOR AUTH')
+            # Create a new user.  As mentioned above, authentication
+            # is handled through LDAP, so we don't need to mess with
+            # a password.
+            user = User(username=username)
             user.is_staff = True
             user.is_superuser = False
             user.save()
