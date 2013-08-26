@@ -182,7 +182,11 @@ API_EXTENSIONS = []
 # Location of the 'scratch' directory where the server
 # can create directories for each transaction
 #TRANSACTION_DIR='/lustre/snsfs/scratch/apache'
-TRANSACTION_DIR='/tmp/apache_scratch' # used for test/debug
+TRANSACTION_DIR='/apache_files' # used for test/debug
+# Note: For reasons that are unclear, apache doesn't seem
+# to be allowed to write to /tmp.  It's not an selinux thing,
+# so I'm guessing there's some default rules in the config
+# file (or possibly it's hard-coded into apache itself?)
 
 # Location of the setfacl binary
 SETFACL_BIN='/usr/bin/setfacl'
