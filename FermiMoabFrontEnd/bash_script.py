@@ -51,6 +51,19 @@ pushd @@TRANSACTION_DIRECTORY@@ > /dev/null
 # Kick off python on the computes...
 $MPI_BIN/mpirun -n $TOTAL_PROCESSES -npernode $CORES_PER_NODE -hostfile $PBS_NODEFILE -x PATH=$PATH -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH -x PYTHONPATH=$PYTHONPATH python ./@@PYTHON_JOB_SCRIPT@@
 
+# OK, this gets a bit twisted:  we need to set the ACL's on any files that have been written
+# so that apache can read (and thus download) them.  Unfortunately, 2 of the files - the
+# stdout & stderr files - won't exist until shortly after this script ends. So, what we will
+# do is queue up another script  using 'at' that will wait until the stdout/stderr files exist
+# and then run 'setfacl'
+
+AT_SCRIPT="while [ -z \\`ls $PBS_JOBID.ER\\` ]; do sleep 1; done; \\
+  while [ -z \\`ls $PBS_JOBID.OU\\` ]; do sleep 1; done; \\
+  for i in \\`find -user $USER\\`;do setfacl -m apache:rw \\$i; done"
+
+echo $AT_SCRIPT | at -M now
+
+
 # Return to the original directory
 # (Not sure this is necessary since the process is going to end anyway...)
 popd > /dev/null
