@@ -422,12 +422,12 @@ def query( request):
                     pass
     
     else:  # MWS returned something other than 200
-        # TODO: The MWS docs don't mention exactly what will be returned if there's
-        # an error.  I'm assuming it's a similar structure to the error returned
-        # when a job submit fails.  I need to test this condition, though!
-        json_out = { }
+        # The MWS docs don't explicitly mention exactly what will be returned if there's
+        # an error.  From testing, it appears to be the same structure as the error returned
+        # when a job submit fails. 
+        json_out = { }      
         json_out['Err_Msg'] = "Error returned from Moab Web Services"
-        json_out['MWS_Err_Msg'] = json_result
+        json_out['MWS_Err_Msg'] = json_result["messages"]
     
     return HttpResponse( json.dumps(json_out, indent=2), status=return_code)
     
