@@ -327,6 +327,38 @@ def submit( request):
     
 
 @logged_in_or_basicauth()
+def abort( request):
+    '''
+    View for aborting a previously submitted job
+    '''
+    
+    # Verify the that we have the proper request parameters
+    if request.method != 'GET':
+        return HttpResponse( err_not_get(), status=400)  # Bad request
+    
+    if 'JobID' in request.GET:
+        # Check to see if the requested job ID is valid (ie, it exists and it
+        # was submitted by the current user
+        (job, error_response) = validate_job_id( request)
+        if error_response != None:
+            # The JobID didn't validate...
+            return error_response 
+    
+    abort_url = settings.MWS_URL + '/jobs/' + request.GET['JobID']
+    return_code,json_result = mws_request( abort_url, None, 'DELETE')
+    
+    json_out = { }
+    if return_code != 200:
+        # The MWS docs don't explicitly mention exactly what will be returned if there's
+        # an error.  From testing, it appears to be the same structure as the error returned
+        # when a job submit fails.       
+        json_out['Err_Msg'] = "Error returned from Moab Web Services"
+        json_out['MWS_Err_Msg'] = json_result["messages"]
+        
+    return HttpResponse( json.dumps(json_out, indent=2), status=return_code)    
+    
+    
+@logged_in_or_basicauth()
 def query( request):
     '''
     View for displaying info about 1 specific job or all of a user's jobs
@@ -402,7 +434,7 @@ def query( request):
     
 
 
-def mws_request( url, post_data=None):
+def mws_request( url, post_data=None, request_type=None):
     '''
     Sends an HTTP (or HTTPS) request to the MWS server and returns the results.
     
@@ -414,11 +446,20 @@ def mws_request( url, post_data=None):
     Returns the http status code and a dictionary containing any JSON data that was returned from MWS
     '''
     
-    encoded_pwd = base64.b64encode( '%s:%s'%(settings.MWS_USER, settings.MWS_PASS))
-    req = urllib2.Request(url)
     # NOTE: There's a warning in the urllib2 docs saying that it does not verify the
     # server's certificate when making HTTPS connections
     
+    req = urllib2.Request(url)
+    
+    # by default, urllib2 will generate either a GET or a POST request for http
+    # urls (depending on whether any post data exists).  In certain cases, we
+    # might want to do something else (DELETE, for example).  Replacing the
+    # get_method function with one that returns the method we want to use seems like
+    # a dirty hack, but it appears to work...
+    if (request_type):
+        req.get_method = lambda: request_type
+        
+    encoded_pwd = base64.b64encode( '%s:%s'%(settings.MWS_USER, settings.MWS_PASS))
     req.add_header('Authorization', 'Basic %s'%encoded_pwd)
     try:
         if post_data != None:
