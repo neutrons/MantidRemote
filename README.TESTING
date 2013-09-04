@@ -11,6 +11,15 @@ set to true (using setsebool)
  httpd_can_connect_ldap
  httpd_can_network_connect
 
+Also possibly this one:
+ httpd_unified
+(I'm not sure what it does, but I get errors writing to the database file 
+when it's false.)
+
+
+Make sure apache is allowed to write to files and directories it needs to:
+(Definitely the scratch transaction dirs and the database file.  Possibly others?)
+chcon -R unconfined_u:object_r:httpd_sys_content_rw_t:s0 <destination>
 -------------------------------------------------------------------------------
 ldap
 ----
