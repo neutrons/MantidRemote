@@ -408,7 +408,7 @@ def query( request):
                     
                     # Transaction ID and script name come from the local db.
                     # (Moab Web Services has no concept of either.)
-                    job_data['TransId'] = job_obj.transaction.id
+                    job_data['TransID'] = job_obj.transaction.id
                     job_data['ScriptName'] = job_obj.script_name
                     
                     json_out[job['id']] = job_data
