@@ -173,10 +173,10 @@ AUTHENTICATION_BACKENDS = (
 # The info view will out this as JSON text
 #
 # This should be an integer.  We don't expect it to increase often/
-API_VERSION = 0  
-# A list of strings (ie: the names of the extensions).  None currently
-# supported.  Check the API doc to see what's been defined so far.
-API_EXTENSIONS = []
+API_VERSION = 1  
+# A list of strings (ie: the names of the extensions).  Check the API doc
+# to see what's been defined and what the names mean.
+API_EXTENSIONS = [ 'JOB_DATES']
 
 
 # Location of the 'scratch' directory where the server

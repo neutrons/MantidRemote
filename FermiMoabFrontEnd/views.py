@@ -13,6 +13,11 @@ import sys
 import subprocess
 import urllib2
 
+# These are used to convert the time strings MWS returns into
+# proper ISO8601 strings
+import time
+import datetime
+import pytz
 
 
 def info( request):
@@ -406,12 +411,22 @@ def query( request):
                     job_data['JobName'] = job['name']
                     job_data['JobStatus'] = job['state']
                     
+                    job_data['SubmitDate'] = toIso8601( job['submitDate'])
+                    job_data['StartDate'] = toIso8601( job['startDate'])
+                    job_data['CompletionDate'] = toIso8601( job['completionDate'])
+                    
                     # Transaction ID and script name come from the local db.
                     # (Moab Web Services has no concept of either.)
                     job_data['TransID'] = job_obj.transaction.id
                     job_data['ScriptName'] = job_obj.script_name
                     
                     json_out[job['id']] = job_data
+                        
+                except IOError, e:
+                    # toIso8601 can throw an IOError  
+                    json_out['Err_Msg'] = "Internal server error: %s" % e.message
+                    return_code = 500;  # so that we return an HTTP 500 
+                    
                 except Job.DoesNotExist:
                     # We don't return data for jobs not in our local db.
                     # Assuming it's not a bug of some kind, then such jobs
@@ -570,7 +585,32 @@ def validate_trans_id( request):
                                     status=400))  # Bad request
     
     return (trans, None)
+ 
+
+def toIso8601( mwsTime):
+    '''
+    Converts a time string as returned from Moab Web Services (which looks
+    something like "2013-09-12 15:42:50 EST") into proper ISO8601 format (in
+    UTC)
     
+    Returns the converted string or raises an IOError if there's a problem.
+    '''
+    
+    shortTime = mwsTime[:-4]
+    zone = mwsTime[len(mwsTime)-3:]
+    
+    seconds = time.mktime( time.strptime( shortTime, "%Y-%m-%d %H:%M:%S"))
+    
+    # Add 4 or 5 hours to the time, depending on the zone
+    if zone == "EDT":
+            seconds += 4 * 3600
+    elif zone == "EST":
+            seconds += 5 * 3600
+    else: # unrecognized time zone
+            raise IOError("MWS returned a time string with an unrecognized time zone! ('%s')" % zone)
+            
+    dt = datetime.datetime.fromtimestamp( seconds, pytz.timezone('UTC'))
+    return dt.isoformat()
     
 def json_err_msg( msg):
     '''
