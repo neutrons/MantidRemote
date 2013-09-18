@@ -17,7 +17,6 @@ import urllib2
 # proper ISO8601 strings
 import time
 import datetime
-import pytz
 
 
 def info( request):
@@ -596,6 +595,9 @@ def toIso8601( mwsTime):
     Returns the converted string or raises an IOError if there's a problem.
     '''
     
+    # Note: Python's timezone handling doesn't quite work for us and since
+    # Fermi will only return EDT or EST, I'm just going to handle the
+    # conversion manually
     shortTime = mwsTime[:-4]
     zone = mwsTime[len(mwsTime)-3:]
     
@@ -609,8 +611,9 @@ def toIso8601( mwsTime):
     else: # unrecognized time zone
             raise IOError("MWS returned a time string with an unrecognized time zone! ('%s')" % zone)
             
-    dt = datetime.datetime.fromtimestamp( seconds, pytz.timezone('UTC'))
-    return dt.isoformat()
+    dt = datetime.datetime.fromtimestamp( seconds)
+    isoString = dt.isoformat() + "+00:00"
+    return isoString
     
 def json_err_msg( msg):
     '''
