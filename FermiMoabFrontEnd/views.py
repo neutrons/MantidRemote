@@ -598,6 +598,18 @@ def toIso8601( mwsTime):
     # Note: Python's timezone handling doesn't quite work for us and since
     # Fermi will only return EDT or EST, I'm just going to handle the
     # conversion manually
+    
+    # quick sanity check - mwsTime might be None (ie: the completion time
+    # for a job that hasn't completed yet)
+    if mwsTime is None:
+        return ""
+
+    # also handle empty strings (although I don't think this will
+    # actually happen)
+    if len(mwsTime) == 0:
+        return ""
+
+    
     shortTime = mwsTime[:-4]
     zone = mwsTime[len(mwsTime)-3:]
     
