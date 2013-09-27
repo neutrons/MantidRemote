@@ -574,7 +574,8 @@ def validate_trans_id( request):
     
     try:        
         trans = Transaction.objects.get( id=trans_id)
-    except Transaction.DoesNotExist:
+    except (Transaction.DoesNotExist, ValueError):
+        # Note: ValueError is thrown if trans_id can't be converted to an integer
         return (None, HttpResponse( json_err_msg( "Transaction '%s' does not exist"%trans_id),
                                     status=400))  # Bad request
             
