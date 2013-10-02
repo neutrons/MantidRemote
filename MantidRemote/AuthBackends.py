@@ -4,6 +4,8 @@
 from django.conf import settings
 from django.contrib.auth.models import User
 
+import sys
+
 # Need the python-ldap package
 import ldap  # @UnresolvedImport
 
