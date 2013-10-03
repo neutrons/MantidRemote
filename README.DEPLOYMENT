@@ -13,4 +13,10 @@ If we ever start using templates, then the TEMPLATE_DIRS will also need to be se
 Fermi doesn't have selinux enabled, so we don't need to worry about setting
 contexts on the files.
 
+The following rsync command will copy the necessary files to the appropriate
+location on Fermi (when executed from the same directory as this README file):
+
+rsync -avz --filter='- .git' --filter='+ *.py' --filter='+ */' --filter='- *' ./ fermi.ornl.gov:/var/www/MantidRemote
+
+
 And yes, I'm trying to figure out a way to automate this...
