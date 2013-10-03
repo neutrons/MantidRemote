@@ -12,6 +12,8 @@ MANAGERS = (
     ('Ross Miller', 'rgmiller@ornl.gov'),
 )
 
+#SERVER_EMAIL='django@fermi.ornl.gov'
+
 # Email about broken links is only sent when NOT in debug mode
 SEND_BROKEN_LINK_EMAILS = not DEBUG
 

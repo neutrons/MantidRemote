@@ -6,6 +6,7 @@ updated:
 DEBUG=False
 DATABASES['NAME'] = '/var/www/MantidRemote/sqlite.db'
 
+Uncomment the SERVER_EMAIL variable
 Uncomment the proper MWS_URL, MWS_USER & MWS_PASS parameters
 
 If we ever start using templates, then the TEMPLATE_DIRS will also need to be set.
