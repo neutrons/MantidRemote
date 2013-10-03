@@ -30,3 +30,6 @@ urlpatterns += patterns( 'FermiMoabFrontEnd.views',
     url(r'^(?i)query$', 'query', name='query_url'),
     url(r'^(?i)abort$', 'abort', name='abort_url'),
 )
+
+handler404 = 'FermiMoabFrontEnd.error_views.error_404'
+handler500 = 'FermiMoabFrontEnd.error_views.error_500'

@@ -4,10 +4,16 @@ DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
-    # ('Your Name', 'your_email@example.com'),
+    ('Ross Miller', 'rgmiller@ornl.gov'),
+    ('Clay England', 'cluster-admins@ccs.ornl.gov')
 )
 
-MANAGERS = ADMINS
+MANAGERS = (
+    ('Ross Miller', 'rgmiller@ornl.gov'),
+)
+
+# Email about broken links is only sent when NOT in debug mode
+SEND_BROKEN_LINK_EMAILS = not DEBUG
 
 DATABASES = {
     'default': {
@@ -22,7 +28,7 @@ DATABASES = {
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
 # See https://docs.djangoproject.com/en/1.4/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [ '.ornl.gov', '.sns.gov', 'localhost']
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
