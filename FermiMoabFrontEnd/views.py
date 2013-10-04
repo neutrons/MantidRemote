@@ -273,7 +273,7 @@ def submit( request):
     submit_file.write( generate_bash_script( NUM_NODES=request.POST['NumNodes'],
                                              CORES_PER_NODE=request.POST['CoresPerNode'],
                                              TRANSACTION_DIRECTORY=trans.directory,
-                                             PYTHON_JOB_SCRIPT=script_name))
+                                             PYTHON_JOB_SCRIPT=os.path.basename(full_script_name)))
     submit_file.close()
     
     # Generate the JSON that's submitted to Moab Web Services
