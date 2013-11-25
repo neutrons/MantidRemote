@@ -385,7 +385,11 @@ def query( request):
         
         # query url for one job
         query_url += "/" + request.GET['JobID']
-    
+
+    # Add the query parameters for the specific fields we want.
+    # Make sure everything we're going to parse down below is actually listed here!
+    query_url += "?fields=name,state,user,id,submitDate,startDate,completionDate"
+
     return_code,json_result = mws_request(query_url)
     
     if return_code == 200:
