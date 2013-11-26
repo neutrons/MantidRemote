@@ -184,7 +184,7 @@ AUTHENTICATION_BACKENDS = (
 API_VERSION = 1  
 # A list of strings (ie: the names of the extensions).  Check the API doc
 # to see what's been defined and what the names mean.
-API_EXTENSIONS = [ 'JOB_DATES']
+API_EXTENSIONS = [ 'JOB_DATES', 'AUTH_USER_NAME']
 
 
 # Location of the 'scratch' directory where the server

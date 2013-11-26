@@ -29,6 +29,8 @@ def info( request):
     json_output = { }
     json_output['API_Version'] = settings.API_VERSION
     json_output['API_Extensions'] = settings.API_EXTENSIONS
+    json_output['Authenticated_As'] =  request.user.username if \
+                                       request.user.is_authenticated() else "" 
     
     # Note: This value must match what the submit view requires! It'd be nice if
     # we could figure out a way to automatically keep it in sync with the submit view...
