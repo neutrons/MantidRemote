@@ -34,10 +34,10 @@ MPI_SUFFIX=_compat_openmpi
 MPI_HOME=/usr/lib64/compat-openmpi
 
 
-PREFIX=/sw/fermi/mantid-mpi/mantid-mpi-2.4.0-1.el6.x86_64
+PREFIX=/sw/fermi/mantid-mpi/mantid-mpi-3.0.0-1.el6.x86_64
 PATH=$PATH:$PREFIX/bin
 # Second one is to pick up boostmpi (not openmpi itself which comes from the compat package above)
-LD_LIBRARY_PATH=$PREFIX/lib:/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
+LD_LIBRARY_PATH=$PREFIX/lib:$PREFIX/plugins:/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
 PYTHONPATH=$PREFIX/bin:$PYTHONPATH
 
 # Compute resources
