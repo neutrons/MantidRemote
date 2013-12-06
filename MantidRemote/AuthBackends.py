@@ -17,7 +17,9 @@ class SnsLdapBackend(object):
     # the MD5 algorithm.  Newer version of openldap (including what's in RedHat 6.0
     # or later) will not accept the certificate by default.  The workaround is to 
     # set "NSS_HASH_ALG_SUPPORT=+MD5" in the python interpreter's environment.
-    
+
+    supports_inactive_user = False
+
     def authenticate(self, username=None, password=None):
         
         #build up the DN we need to bind to
@@ -34,11 +36,13 @@ class SnsLdapBackend(object):
             if not username in search_results[0][1]['memberUid']:
                 return None
 
+        except ldap.INVALID_CREDENTIALS:
+            # Bad password.  No need to log a message
+            return None
         except ldap.LDAPError, e:
             print >>sys.stderr,  "LDAP Exception (%s)"%e.__class__.__name__ 
             print >>sys.stderr, "Message(s):"
-            for key in e.message:
-                print >> sys.stderr, "%s: %s"%(key, e.message[key])
+            print >>sys.stderr, e
             sys.stderr.flush()
             return None
 
@@ -51,9 +55,12 @@ class SnsLdapBackend(object):
         # Note: Enough separate bits of Django require a user object to work
         # that we can't really avoid having one (which is automatically stored
         # in the database).  It might be a good idea to have a process that purges
-        # users from the DB periodically just to keep the DB from growing too big.  
+        # users from the DB periodically just to keep the DB from growing too big. 
+        # Note2: I'm pretty sure transactions are tied to the user, so don't purge
+        # any users who still have transactions open. 
         try:
             user = User.objects.get(username=username)
+            
         except User.DoesNotExist:
             # Create a new user.  As mentioned above, authentication
             # is handled through LDAP, so we don't need to mess with
@@ -61,6 +68,13 @@ class SnsLdapBackend(object):
             user = User(username=username)
             user.is_staff = True
             user.is_superuser = False
+            user.set_unusable_password()
+            # set_unusable_password() makes it so we can't ever use the password
+            # field in the database to log in.  If we just left the field blank
+            # then we end up getting an error about unknown password hashing algorithms
+            # when the regular authentication backend runs.  This seems like a
+            # misleading error message, but the real problem is that the function
+            # throws an exception instead of just returning False.
             user.save()
         return user
 
