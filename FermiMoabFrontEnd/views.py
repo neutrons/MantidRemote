@@ -496,10 +496,17 @@ def mws_request( url, post_data=None, request_type=None):
     except urllib2.HTTPError, e:
         # urllib2 seems to throw these in any case where the status code
         # was not 2xx
-        json_result = json.load(e) # calls e.read()...
         print >>sys.stderr, "Error returned from MWS server.  Code: %d"%e.code       
         print >>sys.stderr,  "Message returned from MWS:"
-        json.dump(json_result, sys.stderr, indent=2)
+        try:
+            json_result = json.load(e) # calls e.read()...
+            json.dump(json_result, sys.stderr, indent=2)
+        except:
+            # If we actually managed to contact the MWS server, then e
+            # will be a JSON formatted string that we can pretty-print.
+            # Otherwise, we'll just write it out to stderr
+            print >>sys.stderr, e
+        
         sys.stderr.flush()
         status_code = e.code;
     
