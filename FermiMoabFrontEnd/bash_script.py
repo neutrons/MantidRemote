@@ -54,14 +54,23 @@ $MPI_BIN/mpirun -n $TOTAL_PROCESSES -npernode $CORES_PER_NODE -hostfile $PBS_NOD
 # OK, this gets a bit twisted:  we need to set the ACL's on any files that have been written
 # so that apache can read (and thus download) them.  Unfortunately, 2 of the files - the
 # stdout & stderr files - won't exist until shortly after this script ends. So, what we will
-# do is queue up another script  using 'at' that will wait until the stdout/stderr files exist
-# and then run 'setfacl'
+# do is queue up another script in the background (using setsid to detach it from this
+# script) that will wait until the stdout/stderr files exist and then run 'setfacl'
 
-AT_SCRIPT="while [ -z \\`ls $PBS_JOBID.ER\\` ]; do sleep 1; done; \\
-  while [ -z \\`ls $PBS_JOBID.OU\\` ]; do sleep 1; done; \\
-  for i in \\`find -user $USER\\`;do setfacl -m apache:rw \\$i; done"
+ACL_SCRIPT="echo \\"Starting AT script\\";
+  while [ -z \\`ls $PBS_JOBID.ER 2>/dev/null\\` ];
+  do sleep 1; done;
+  while [ -z \\`ls $PBS_JOBID.OU 2>/dev/null\\` ];
+  do sleep 1; done;
+  for i in \\`find -user $USER\\`;
+  do echo \\$i; setfacl -m apache:rw \\$i; done;
+  echo \\"Finished AT script\\""
 
-echo $AT_SCRIPT | at -M now
+echo $ACL_SCRIPT > adjust_acls.sh
+chmod u+x adjust_acls.sh
+setsid ./adjust_acls.sh >/dev/null 2>&1 < /dev/null &
+# Note: replace the first /dev/null with a filename to see debug output from the ACL script
+
 
 
 # Return to the original directory
