@@ -61,3 +61,15 @@ Stop a transaction:
 curl -c curl_cookie_jar -b curl_cookie_jar localhost:8000/transaction?Action=Stop\&TransID=3
 
 -------------------------------------------------------------------------------
+Python snippet suitable for pasting into 
+the MantidPlot script interpreter
+----------------------------------------
+
+remote_script="from mantid.simpleapi import *; import time; import platform; print 'Hello World! (%s)'%platform.node(); time.sleep(30); print 'Goodbye World'"
+
+trans = StartRemoteTransaction( 'Fermi')
+print trans
+j = SubmitRemoteJob('Fermi', trans, 'mantid-3.0-test.py', remote_script, 4, 4, 'Mantid_3.0_Test')
+print j
+# Wait here until the job is complete and you've looked at the output
+StopRemoteTransaction('Fermi', trans)

@@ -19,26 +19,18 @@ script_template = '''
 # Set the variables that 'module load mantid-mpi' would normally set
 # (Make sure you use the -x param to mpirun to pass the variables that
 # the compute nodes need over to them.)
-PATH=/usr/lib64/compat-openmpi/bin:$PATH
-LD_LIBRARY_PATH=/usr/lib64/compat-openmpi/lib:$LD_LIBRARY_PATH
-PYTHONPATH=/usr/lib64/python2.6/site-packages/compat-openmpi:$PYTHONPATH
-MPI_BIN=/usr/lib64/compat-openmpi/bin
-MPI_SYSCONFIG=/etc/compat-openmpi-x86_64
-MPI_FORTRAN_MOD_DIR=/usr/lib64/gfortran/modules/compat-openmpi-x86_64
-MPI_INCLUDE=/usr/include/compat-openmpi-x86_64
-MPI_LIB=/usr/lib64/compat-openmpi/lib
-MPI_MAN=/usr/share/man/compat-openmpi-x86_64
-MPI_PYTHON_SITEARCH=/usr/lib64/python2.6/site-packages/compat-openmpi
-MPI_COMPILER=compat-openmpi-x86_64
-MPI_SUFFIX=_compat_openmpi
-MPI_HOME=/usr/lib64/compat-openmpi
+MPI_HOME=/sw/fermi/openmpi-1.8.7_nodlopen
+PATH=$MPI_HOME/bin:$PATH
+MPI_BIN=$MPI_HOME/bin
+MPI_SYSCONFIG=$MPI_HOME/etc
+MPI_INCLUDE=$MPI_HOME/include
+MPI_LIB=$MPI_HOME/lib
 
-
-PREFIX=/sw/fermi/mantid-mpi/mantid-mpi-3.0.0-1.el6.x86_64
+PREFIX=/sw/fermi/mantid-mpi/mantid-mpi-3.4.0-Linux
 PATH=$PATH:$PREFIX/bin
-# Second one is to pick up boostmpi (not openmpi itself which comes from the compat package above)
-LD_LIBRARY_PATH=$PREFIX/lib:$PREFIX/plugins:/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
-PYTHONPATH=$PREFIX/bin:$PYTHONPATH
+# /usr/lib64/openmpi is to pick up boostmpi (not openmpi itself)
+LD_LIBRARY_PATH=$PREFIX/lib:$PREFIX/plugins:$MPI_HOME/lib:/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
+PYTHONPATH=$PREFIX/bin:/usr/lib64/openmpi/lib:$PYTHONPATH
 
 # Compute resources
 NUM_NODES=@@NUM_NODES@@
@@ -49,7 +41,9 @@ TOTAL_PROCESSES=$((NUM_NODES * CORES_PER_NODE))
 pushd @@TRANSACTION_DIRECTORY@@ > /dev/null
 
 # Kick off python on the computes...
-$MPI_BIN/mpirun -n $TOTAL_PROCESSES -npernode $CORES_PER_NODE -hostfile $PBS_NODEFILE -x PATH=$PATH -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH -x PYTHONPATH=$PYTHONPATH python ./@@PYTHON_JOB_SCRIPT@@
+$MPI_BIN/mpirun -n $TOTAL_PROCESSES -x PATH=$PATH -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH -x PYTHONPATH=$PYTHONPATH python ./@@PYTHON_JOB_SCRIPT@@
+# We used to have to include  '-npernode $CORES_PER_NODE -hostfile $PBS_NODEFILE', 
+# but we don't any more.
 
 # OK, this gets a bit twisted:  we need to set the ACL's on any files that have been written
 # so that apache can read (and thus download) them.  Unfortunately, 2 of the files - the

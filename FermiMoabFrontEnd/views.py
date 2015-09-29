@@ -291,18 +291,17 @@ def submit( request):
     else:
         submit_json['name'] = "Unknown"
     
-    submit_json['requirements'] = [ {"requiredProcessorCountMinimum": request.POST['NumNodes']} ]
-    # Yes, this is confusing, but the way we've got Moab configured on Femi,
-    # requiredProcessorCountMinimum actually specifies the number of NODES
-    # that are reserved for the job.
-    # Also, for reasons that have never been clear, MWS wants the requirements field to be a list
-    # containing a single object (instead of just the object itself...)
+    num_cores = int(request.POST['NumNodes']) * int (request.POST['CoresPerNode'])
+    submit_json['requirements'] = [ {"requiredProcessorCountMinimum": num_cores, "tasksPerNode": request.POST['CoresPerNode']} ]                                
+    # For reasons that have never been clear, MWS wants the requirements
+    # field to be a list containing a single object (instead of just the
+    # object itself...)
     
-    # This isn't necessary for Moab to schedule the job.  However, by setting the variable,
-    # we can distinguish between jobs that were submitted via this mechanism and stuff that
-    # the user might have just qsub'd...
-    # Note: Last I knew, a bug in MWS meant these variables were forgotten.  Not sure if this
-    # has been fixed yet. 
+    # This isn't necessary for Moab to schedule the job.  However, by setting
+    # the variable, we can distinguish between jobs that were submitted via
+    # this mechanism and stuff that the user might have just qsub'd...
+    # Note: Last I knew, a bug in MWS meant these variables were forgotten.
+    # Not sure if this has been fixed yet.
     submit_json['variables'] = {"JOB_TYPE":"Mantid"}
     submit_json['standardErrorFilePath'] = trans.directory
     submit_json['standardOutputFilePath'] = trans.directory
