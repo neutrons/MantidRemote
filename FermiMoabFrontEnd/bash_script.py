@@ -4,9 +4,10 @@ The script template is below and substitutions for certain things (like the
 name of the python script to run) are made before saving the file.  
 '''
 
-
-script_template = '''
-#!/usr/bin/bash
+# Note: it's important not to have a newline between the 3 quotes and the
+# pound bang, otherwise you end up with a blank line at the top of the
+# generated script and your request for a specific interpreter gets ignored.
+script_template = '''#!/bin/bash
 #
 # Script suitable for calling a python script from within a Mantid-MPI environment
 #
@@ -16,21 +17,11 @@ script_template = '''
 # once it's written to Fermi.
 #
 
-# Set the variables that 'module load mantid-mpi' would normally set
-# (Make sure you use the -x param to mpirun to pass the variables that
-# the compute nodes need over to them.)
-MPI_HOME=/sw/fermi/openmpi-1.8.7_nodlopen
-PATH=$MPI_HOME/bin:$PATH
-MPI_BIN=$MPI_HOME/bin
-MPI_SYSCONFIG=$MPI_HOME/etc
-MPI_INCLUDE=$MPI_HOME/include
-MPI_LIB=$MPI_HOME/lib
-
-PREFIX=/sw/fermi/mantid-mpi/mantid-mpi-3.4.0-Linux
-PATH=$PATH:$PREFIX/bin
-# /usr/lib64/openmpi is to pick up boostmpi (not openmpi itself)
-LD_LIBRARY_PATH=$PREFIX/lib:$PREFIX/plugins:$MPI_HOME/lib:/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
-PYTHONPATH=$PREFIX/bin:/usr/lib64/openmpi/lib:$PYTHONPATH
+# Set up the environment for Mantid-MPI (this includes the proper path for
+# MPI specific stuff like mpirun)
+module load mantid-mpi/3.4.0
+# In the future, it would be good to let the user pick the version of Mantid
+# to use (especially if we get the nightly builds working again).
 
 # Compute resources
 NUM_NODES=@@NUM_NODES@@
@@ -41,7 +32,7 @@ TOTAL_PROCESSES=$((NUM_NODES * CORES_PER_NODE))
 pushd @@TRANSACTION_DIRECTORY@@ > /dev/null
 
 # Kick off python on the computes...
-$MPI_BIN/mpirun -n $TOTAL_PROCESSES -x PATH=$PATH -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH -x PYTHONPATH=$PYTHONPATH python ./@@PYTHON_JOB_SCRIPT@@
+mpirun -n $TOTAL_PROCESSES -x PATH=$PATH -x LD_LIBRARY_PATH=$LD_LIBRARY_PATH -x PYTHONPATH=$PYTHONPATH python ./@@PYTHON_JOB_SCRIPT@@
 # We used to have to include  '-npernode $CORES_PER_NODE -hostfile $PBS_NODEFILE', 
 # but we don't any more.
 
